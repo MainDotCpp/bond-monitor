@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Band </title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 10px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 15px;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 24px;
+        }
+        .section {
+            margin-bottom: 15px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .section h2 {
+            color: #555;
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        .form-group {
+            margin-bottom: 10px;
+        }
+        label {
+            display: block;
+            margin-bottom: 3px;
+            font-weight: bold;
+            font-size: 13px;
+        }
+        input, select {
+            width: 100%;
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 13px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 5px;
+            margin-bottom: 5px;
+            font-size: 12px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button.danger {
+            background-color: #dc3545;
+        }
+        button.danger:hover {
+            background-color: #c82333;
+        }
+        button.success {
+            background-color: #28a745;
+        }
+        button.success:hover {
+            background-color: #218838;
+        }
+        button.warning {
+            background-color: #ffc107;
+            color: #212529;
+        }
+        button.warning:hover {
+            background-color: #e0a800;
+        }
+        .accounts-list {
+            margin-top: 5px;
+        }
+        .account-item {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 6px;
+            background-color: #f9f9f9;
+        }
+        .account-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+        .status {
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: white;
+            font-size: 10px;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+        .status.running {
+            background-color: #28a745;
+        }
+        .status.paused {
+            background-color: #ffc107;
+            color: #212529;
+        }
+        .status.stopped {
+            background-color: #6c757d;
+        }
+        .response {
+            margin-top: 5px;
+            padding: 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            font-size: 11px;
+        }
+        .response.success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .response.error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        
+        /* 进度条样式 */
+        .progress-container {
+            margin: 0 auto;
+            background-color: #f0f0f0;
+            border-radius: 6px;
+            height: 12px;
+            position: relative;
+            overflow: hidden;
+            width: 100px;
+            display: block;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            border-radius: 6px;
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 9px;
+            font-weight: bold;
+            text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
+        }
+        
+        .progress-bar.low {
+            background: linear-gradient(90deg, #ff6b6b, #ff8e8e);
+        }
+        
+        .progress-bar.medium {
+            background: linear-gradient(90deg, #ffd93d, #ffed4a);
+            color: #333;
+            text-shadow: none;
+        }
+        
+        .progress-bar.high {
+            background: linear-gradient(90deg, #6bcf7f, #4ecdc4);
+        }
+        
+        .progress-bar.complete {
+            background: linear-gradient(90deg, #28a745, #20c997);
+        }
+        
+        .progress-info {
+            font-size: 9px;
+            color: #666;
+            margin-top: 2px;
+            display: block;
+            text-align: center;
+            white-space: nowrap;
+        }
+        
+        .target-info {
+            display: inline-block;
+            padding: 1px 4px;
+            background-color: #e9ecef;
+            border-radius: 3px;
+            font-size: 10px;
+            margin-left: 3px;
+        }
+        
+        .notes {
+            font-style: italic;
+            color: #666;
+            font-size: 10px;
+            margin-top: 1px;
+        }
+        
+        .account-details {
+            display: grid;
+            grid-template-columns: 500px 150px 130px 90px 1fr;
+            gap: 6px;
+            align-items: flex-start;
+            font-size: 11px;
+        }
+        
+        /* 列容器样式 */
+        .account-details > div {
+            padding: 4px;
+            min-height: 32px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        /* 操作列特殊样式，覆盖父容器的flex-direction */
+        .account-actions {
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: wrap;
+            gap: 3px;
+            justify-content: flex-end;
+            width: 100%;
+            align-self: flex-end;
+
+        }
+        
+        /* 调试用：显示列边界（需要时取消注释）
+        .account-details > div {
+            border: 1px solid rgba(0,0,255,0.1);
+        }
+        */
+        
+        .account-basic {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 2px;
+            padding: 2px 0;
+            width: 100%;
+        }
+        
+        .account-basic-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+            width: 100%;
+        }
+        
+        .account-id {
+            font-weight: bold;
+            color: #007bff;
+            min-width: 35px;
+        }
+        
+        .account-username {
+            font-weight: bold;
+            min-width: 80px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .account-counts {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            color: #666;
+            font-size: 10px;
+            width: 100%;
+        }
+        
+        .account-counts-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+        }
+        
+        .account-progress {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+            width: 100%;
+        }
+        
+        .account-status-info {
+            color: #666;
+            font-size: 9px;
+            text-align: center;
+            width: 100%;
+            line-height: 1.2;
+        }
+        
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 添加账户 -->
+        <div class="section">
+            <h2 onclick="toggleAddAccount()" style="cursor: pointer; user-select: none;">➤ 添加账户</h2>
+            <div id="addAccountForm" style="display: none;">
+                <div style="display: flex; gap: 15px;">
+                    <div style="flex: 1;">
+                        <h3 style="margin: 0 0 10px 0; font-size: 14px;">单个添加</h3>
+                        <div class="form-group">
+                            <label for="username">用户名 (邮箱):</label>
+                            <input type="email" id="username" placeholder="your_email@example.com">
+                        </div>
+                        <div class="form-group">
+                            <label for="password">密码:</label>
+                            <input type="password" id="password" placeholder="输入密码">
+                        </div>
+                        <button onclick="addAccount()">添加账户</button>
+                    </div>
+                    <div style="flex: 1;">
+                        <h3 style="margin: 0 0 10px 0; font-size: 14px;">批量添加</h3>
+                        <div class="form-group">
+                            <label for="batchAccounts">批量账户 (每行一个，格式：邮箱-密码-备注，备注可选):</label>
+                            <textarea id="batchAccounts" rows="5" placeholder="oastcav13@hotmail.com----XCGFLTm080&#10;opticnh04@hotmail.com----SVGVUVSfcl5&#10;aeriaoea8@hotmail.com----CGo67035---备注&#10;ttyp68059@hotmail.com----QSPFKGMZBpj1&#10;fnenfc217@hotmail.com----Kh6323585" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 12px; resize: vertical;"></textarea>
+                        </div>
+                        <button onclick="addBatchAccounts()">批量添加</button>
+                    </div>
+                </div>
+                <div id="addAccountResponse" class="response" style="display: none;"></div>
+            </div>
+        </div>
+
+        <!-- 账户列表 -->
+        <div class="section">
+            <h2>账户列表</h2>
+            <button onclick="loadAccounts()">刷新列表</button>
+            <button onclick="testStatusCheck()" style="margin-left: 10px;">测试状态检查</button>
+            
+            
+            <div id="accountsList" class="accounts-list"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        
+        function toggleAddAccount() {
+            const form = document.getElementById('addAccountForm');
+            const header = document.querySelector('h2[onclick="toggleAddAccount()"]');
+            if (form.style.display === 'none') {
+                form.style.display = 'block';
+                header.innerHTML = '▼ 添加账户';
+            } else {
+                form.style.display = 'none';
+                header.innerHTML = '➤ 添加账户';
+            }
+        }
+
+        function generateProgressBar(account) {
+            const progressGained = account.friend_count || 0; // 数据库中保存的增量
+            const progressNeeded = account.target_friend_count; // 目标增量
+            
+            if (progressNeeded <= 0) {
+                return '<div class="progress-info">未设置目标</div>';
+            }
+            
+            const progressPercentage = progressNeeded > 0 ? Math.min(100, (progressGained / progressNeeded) * 100) : 100;
+            
+            let progressClass = 'low';
+            if (progressPercentage >= 100) {
+                progressClass = 'complete';
+            } else if (progressPercentage >= 75) {
+                progressClass = 'high';
+            } else if (progressPercentage >= 40) {
+                progressClass = 'medium';
+            }
+            
+            const progressText = progressPercentage >= 100 ? '目标达成!' : `${progressPercentage.toFixed(1)}%`;
+            
+            return `
+                <div class="progress-container">
+                    <div class="progress-bar ${progressClass}" style="width: ${Math.max(5, progressPercentage)}%">
+                        ${progressPercentage > 15 ? progressText : ''}
+                    </div>
+                    ${progressPercentage <= 15 ? `<span style="position: absolute; left: 2px; top: 50%; transform: translateY(-50%); font-size: 8px; color: #333;">${progressText}</span>` : ''}
+                </div>
+                <div class="progress-info">${progressGained}/${progressNeeded}</div>
+            `;
+        }
+
+        async function makeRequest(url, options = {}) {
+            try {
+                const response = await fetch(API_BASE + url, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                const data = await response.json();
+                return { success: response.ok, data, status: response.status };
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+
+        function showResponse(elementId, result) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = `response ${result.success ? 'success' : 'error'}`;
+            element.textContent = result.success 
+                ? JSON.stringify(result.data, null, 2)
+                : (result.error || JSON.stringify(result.data, null, 2));
+        }
+
+        async function addAccount() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            if (!username || !password) {
+                alert('请填写用户名和密码');
+                return;
+            }
+
+            const result = await makeRequest('/accounts', {
+                method: 'POST',
+                body: JSON.stringify({ username, password })
+            });
+
+            showResponse('addAccountResponse', result);
+            
+            if (result.success) {
+                document.getElementById('username').value = '';
+                document.getElementById('password').value = '';
+                loadAccounts(); // 刷新账户列表
+            }
+        }
+
+        async function addBatchAccounts() {
+            const batchText = document.getElementById('batchAccounts').value.trim();
+            
+            if (!batchText) {
+                alert('请输入批量账户信息');
+                return;
+            }
+
+            const lines = batchText.split('\n').filter(line => line.trim());
+            const accounts = [];
+            const errors = [];
+
+            // 解析每一行
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+
+                // 使用正则表达式匹配邮箱、密码和可选的备注
+                // 匹配格式：邮箱----密码---备注 (备注可选)
+                const regex = /^([^\-\s]+@[^\-\s]+\.[^\-\s]+)\s*-{1,}\s*([^\-]+?)(?:\s*-{1,}\s*(.+))?$/;
+                const match = line.match(regex);
+                
+                console.log(`Line: ${line}`);
+                console.log(`Match:`, match);
+                
+                if (!match) {
+                    errors.push(`第${i + 1}行格式错误: ${line} (应为: 邮箱---密码 或 邮箱---密码---备注)`);
+                    continue;
+                }
+
+                const username = match[1].trim();
+                const password = match[2].trim();
+                const notes = match[3] ? match[3].trim() : null;
+                
+                console.log(`Parsed: username=${username}, password=${password}, notes=${notes}`);
+
+                if (!username || !password) {
+                    errors.push(`第${i + 1}行用户名或密码为空: ${line}`);
+                    continue;
+                }
+
+                // 更详细的邮箱格式验证
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(username)) {
+                    errors.push(`第${i + 1}行邮箱格式错误: ${username}`);
+                    continue;
+                }
+
+                accounts.push({ username, password, notes });
+            }
+
+            if (errors.length > 0) {
+                alert('解析错误：\n' + errors.join('\n'));
+                return;
+            }
+
+            if (accounts.length === 0) {
+                alert('没有找到有效的账户信息');
+                return;
+            }
+
+            // 批量添加账户
+            let successCount = 0;
+            let failCount = 0;
+            const results = [];
+
+            for (let i = 0; i < accounts.length; i++) {
+                const account = accounts[i];
+                try {
+                    // 创建账户
+                    const result = await makeRequest('/accounts', {
+                        method: 'POST',
+                        body: JSON.stringify({ username: account.username, password: account.password })
+                    });
+
+                    if (result.success && account.notes) {
+                        // 如果有备注，创建成功后设置备注
+                        const accountId = result.data.account_id;
+                        console.log(`Setting notes for account ${accountId}: ${account.notes}`);
+                        
+                        // 添加小延迟确保账户创建完全完成
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                        
+                        const notesResult = await makeRequest(`/accounts/${accountId}/target`, {
+                            method: 'PUT',
+                            body: JSON.stringify({
+                                target_friend_count: 10, // 使用默认目标
+                                notes: account.notes
+                            })
+                        });
+                        
+                        if (!notesResult.success) {
+                            console.error(`Failed to set notes for ${account.username}:`, notesResult);
+                            failCount++;
+                            results.push(`✗ ${account.username} - 备注设置失败: ${notesResult.data?.detail || '未知错误'}`);
+                            return; // 跳过成功计数
+                        } else {
+                            console.log(`Notes set successfully for ${account.username}`);
+                        }
+                    }
+
+                    if (result.success) {
+                        successCount++;
+                        const noteInfo = account.notes ? ` (备注: ${account.notes})` : '';
+                        results.push(`✓ ${account.username}${noteInfo} - 添加成功`);
+                    } else {
+                        failCount++;
+                        results.push(`✗ ${account.username} - ${result.data?.detail || '添加失败'}`);
+                    }
+                } catch (error) {
+                    failCount++;
+                    results.push(`✗ ${account.username} - 网络错误: ${error.message}`);
+                }
+            }
+
+            // 显示结果
+            const responseElement = document.getElementById('addAccountResponse');
+            responseElement.style.display = 'block';
+            responseElement.className = successCount > 0 ? 'response success' : 'response error';
+            responseElement.textContent = `批量添加完成！\n成功: ${successCount}个\n失败: ${failCount}个\n\n详细结果:\n${results.join('\n')}`;
+
+            // 清空输入框并刷新列表
+            if (successCount > 0) {
+                document.getElementById('batchAccounts').value = '';
+                loadAccounts();
+            }
+        }
+
+        async function loadAccounts() {
+            const result = await makeRequest('/accounts');
+            
+            const accountsList = document.getElementById('accountsList');
+            
+            if (result.success && result.data.data.accounts) {
+                const accounts = result.data.data.accounts;
+                accountsList.innerHTML = accounts.map(account => `
+                    <div class="account-item">
+                        <div class="account-details">
+                            <div class="account-basic">
+                                <div class="account-basic-row">
+                                    <span class="account-id">ID:${account.id}</span>
+                                    <span class="account-username">${account.username}</span>
+                                    <span class="status ${account.status}">${getStatusText(account.status)}</span>
+                                </div>
+                                <div class="account-basic-row">
+                                    <span class="target-info">目标+${account.target_friend_count}</span>
+                                    <span>Band:${account.band_name || 'Unknown'}</span>
+                                </div>
+                            </div>
+                            <div class="account-counts">
+                                <div class="account-counts-row">
+                                    <span>当前:${(account.current_friend_count || 0) + (account.current_friend_requests || 0)}</span>
+                                    <span>(${account.current_friend_count}好友+${account.current_friend_requests}请求)</span>
+                                </div>
+                                <div class="account-counts-row">
+                                    <span>初始:${(account.initial_friend_count || 0) + (account.initial_friend_requests || 0)}</span>
+                                    <span>(${account.initial_friend_count}好友+${account.initial_friend_requests}请求)</span>
+                                </div>
+                            </div>
+                            <div class="account-progress">
+                                ${generateProgressBar(account)}
+                            </div>
+                            <div class="account-status-info">
+                                <span id="browserStatus${account.id}">检查中</span><br>
+                                ${account.last_updated ? account.last_updated.substring(11, 19) : '未更新'}
+                                ${account.notes ? `<br>备注:${account.notes}` : ''}
+                            </div>
+                            <div class="account-actions">
+                                <button class="success" onclick="startMonitoring(${account.id})">开始</button>
+                                <button class="warning" onclick="pauseMonitoring(${account.id})">暂停</button>
+                                <button onclick="resumeMonitoring(${account.id})">恢复</button>
+                                <button onclick="closeBrowser(${account.id})">关闭</button>
+                                <button onclick="editTarget(${account.id})">目标</button>
+                                <button onclick="captureScreenshot(${account.id})">截图</button>
+                                <button onclick="getAccountDetails(${account.id})">详情</button>
+                                <button class="danger" onclick="deleteAccount(${account.id})">删除</button>
+                            </div>
+                        </div>
+                        <div id="accountResponse${account.id}" class="response" style="display: none;"></div>
+                    </div>
+                `).join('');
+                
+                // 异步获取每个账户的浏览器状态，添加小延迟确保DOM已更新
+                setTimeout(() => {
+                    accounts.forEach(account => {
+                        checkBrowserStatus(account.id);
+                    });
+                }, 100);
+            } else {
+                accountsList.innerHTML = '<p>暂无账户数据</p>';
+            }
+        }
+
+        function getStatusText(status) {
+            const statusMap = {
+                'running': '运行中',
+                'paused': '已暂停',
+                'stopped': '已停止'
+            };
+            return statusMap[status] || status;
+        }
+
+        async function startMonitoring(accountId) {
+            const result = await makeRequest(`/accounts/${accountId}/start`, {
+                method: 'POST'
+            });
+            showResponse(`accountResponse${accountId}`, result);
+            if (result.success) loadAccounts();
+        }
+
+        async function pauseMonitoring(accountId) {
+            const result = await makeRequest(`/accounts/${accountId}/pause`, {
+                method: 'POST'
+            });
+            showResponse(`accountResponse${accountId}`, result);
+            if (result.success) loadAccounts();
+        }
+
+        async function resumeMonitoring(accountId) {
+            const result = await makeRequest(`/accounts/${accountId}/resume`, {
+                method: 'POST'
+            });
+            showResponse(`accountResponse${accountId}`, result);
+            if (result.success) loadAccounts();
+        }
+
+        async function getAccountDetails(accountId) {
+            const result = await makeRequest(`/accounts/${accountId}`);
+            showResponse(`accountResponse${accountId}`, result);
+        }
+
+        async function closeBrowser(accountId) {
+            if (confirm('确定要关闭这个账户的浏览器吗？')) {
+                const result = await makeRequest(`/accounts/${accountId}/close`, {
+                    method: 'POST'
+                });
+                showResponse(`accountResponse${accountId}`, result);
+                if (result.success) loadAccounts();
+            }
+        }
+
+        async function deleteAccount(accountId) {
+            if (confirm('确定要删除这个账户吗？')) {
+                const result = await makeRequest(`/accounts/${accountId}`, {
+                    method: 'DELETE'
+                });
+                showResponse(`accountResponse${accountId}`, result);
+                if (result.success) loadAccounts();
+            }
+        }
+
+        async function checkBrowserStatus(accountId) {
+            console.log(`Starting status check for account ${accountId}`);
+            const statusElement = document.getElementById(`browserStatus${accountId}`);
+            
+            if (!statusElement) {
+                console.error(`Status element not found for account ${accountId}`);
+                return;
+            }
+            
+            try {
+                statusElement.style.color = '#666';
+                
+                // 使用直接的fetch而不是makeRequest来排除问题
+                const response = await fetch(`/api/accounts/${accountId}/status`);
+                const data = await response.json();
+                
+                console.log(`Direct fetch result for account ${accountId}:`, data);
+                console.log(`Response ok: ${response.ok}, Status: ${response.status}`);
+                console.log(`Data structure:`, {
+                    hasData: !!data,
+                    hasDataData: !!(data && data.data),
+                    hasBrowserStatus: !!(data && data.data && data.data.browser_status)
+                });
+                
+                if (data && data.data && data.data.browser_status) {
+                    const browserStatus = data.data.browser_status;
+                    let statusText = '';
+                    let statusColor = '#999';
+                    
+                    if (browserStatus.browser_open) {
+                        if (browserStatus.on_member_page) {
+                            statusText = '在成员页面';
+                            statusColor = '#28a745';
+                        } else {
+                            statusText = '不在成员页面';
+                            statusColor = '#ffc107';
+                        }
+                    } else {
+                        statusText = '浏览器未打开';
+                        statusColor = '#dc3545';
+                    }
+                    
+                    statusElement.textContent = statusText;
+                    statusElement.style.color = statusColor;
+                    console.log(`Status updated for account ${accountId}: ${statusText}`);
+                } else {
+                    console.error(`Invalid data structure for account ${accountId}:`, data);
+                    statusElement.textContent = `数据格式错误`;
+                    statusElement.style.color = '#dc3545';
+                }
+            } catch (error) {
+                console.error(`Exception in checkBrowserStatus for account ${accountId}:`, error);
+                statusElement.textContent = `检查异常: ${error.message}`;
+                statusElement.style.color = '#dc3545';
+            }
+        }
+
+        async function testStatusCheck() {
+            console.log('Testing status check...');
+            const accounts = await makeRequest('/accounts');
+            if (accounts.success && accounts.data.accounts) {
+                for (const account of accounts.data.accounts) {
+                    console.log(`Testing status for account ${account.id}`);
+                    await checkBrowserStatus(account.id);
+                }
+            }
+        }
+
+        async function captureScreenshot(accountId) {
+            try {
+                const result = await makeRequest(`/accounts/${accountId}/screenshot`, {
+                    method: 'POST'
+                });
+                
+                if (result.success) {
+                    alert(`截图保存成功！\n路径: ${result.data.screenshot_path}`);
+                } else {
+                    alert(`截图失败: ${result.error || '未知错误'}`);
+                }
+                
+                showResponse(`accountResponse${accountId}`, result);
+            } catch (error) {
+                alert(`截图失败: ${error.message}`);
+            }
+        }
+
+        async function editTarget(accountId) {
+            console.log('Edit target clicked for account:', accountId);
+            
+            const accounts = await makeRequest('/accounts');
+            console.log('Accounts response:', accounts);
+            
+            if (!accounts.success) {
+                alert('无法获取账户信息');
+                return;
+            }
+            
+            const account = accounts.data.data.accounts.find(acc => acc.id === accountId);
+            console.log('Found account:', account);
+            
+            if (!account) {
+                alert('账户不存在');
+                return;
+            }
+            
+            const currentTarget = account.target_friend_count;
+            const currentNotes = account.notes || '';
+            
+            const newTarget = prompt(`设置目标好友增量\n当前目标增量: +${currentTarget}`, currentTarget);
+            if (newTarget === null) return; // 用户取消
+            
+            const targetCount = parseInt(newTarget);
+            if (isNaN(targetCount) || targetCount < 0) {
+                alert('请输入有效的数字');
+                return;
+            }
+            
+            const newNotes = prompt(`设置备注\n当前备注: ${currentNotes}`, currentNotes);
+            if (newNotes === null) return; // 用户取消
+            
+            try {
+                const result = await makeRequest(`/accounts/${accountId}/target`, {
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        target_friend_count: targetCount,
+                        notes: newNotes
+                    })
+                });
+                
+                if (result.success) {
+                    loadAccounts(); // 刷新列表
+                    alert('设置成功');
+                } else {
+                    alert(`设置失败: ${result.error || '未知错误'}`);
+                }
+            } catch (error) {
+                alert(`设置失败: ${error.message}`);
+            }
+        }
+
+        // 自动刷新功能
+        let autoRefreshInterval;
+        
+        function startAutoRefresh() {
+            // 每5秒刷新一次账户列表
+            autoRefreshInterval = setInterval(loadAccounts, 5000);
+        }
+        
+        function stopAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+            }
+        }
+        
+        // 页面加载时自动获取账户列表并开始自动刷新
+        window.onload = function() {
+            loadAccounts();
+            startAutoRefresh();
+        };
+        
+        // 页面失去焦点时停止自动刷新，获得焦点时恢复
+        window.addEventListener('blur', stopAutoRefresh);
+        window.addEventListener('focus', function() {
+            loadAccounts();
+            startAutoRefresh();
+        });
+    </script>
+</body>
+</html>

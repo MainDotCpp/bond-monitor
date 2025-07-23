@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Status Test</title>
+</head>
+<body>
+    <h1>Browser Status Test</h1>
+    <div>
+        <button onclick="testStatus()">Test Status Check</button>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        async function testStatus() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Testing...';
+            
+            try {
+                const response = await fetch('/api/accounts/1/status');
+                const data = await response.json();
+                
+                console.log('Response:', data);
+                
+                if (data.success && data.data && data.data.browser_status) {
+                    const bs = data.data.browser_status;
+                    resultDiv.innerHTML = `
+                        <p>Success: ${data.success}</p>
+                        <p>Browser Open: ${bs.browser_open}</p>
+                        <p>On Member Page: ${bs.on_member_page}</p>
+                        <p>Needs Login: ${bs.needs_login}</p>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<p>Failed: ${JSON.stringify(data)}</p>`;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                resultDiv.innerHTML = `<p>Error: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

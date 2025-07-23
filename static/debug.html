@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Test</title>
+</head>
+<body>
+    <h1>Debug Test</h1>
+    <button onclick="testEditTarget()">Test Edit Target</button>
+    <div id="result"></div>
+
+    <script>
+        async function testEditTarget() {
+            console.log('Test button clicked');
+            
+            try {
+                const response = await fetch('/api/accounts');
+                const data = await response.json();
+                
+                document.getElementById('result').innerHTML = `
+                    <h3>API Response:</h3>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+                
+                if (data.success && data.data.accounts.length > 0) {
+                    const account = data.data.accounts[0];
+                    alert(`Found account: ${account.username}\nTarget: ${account.target_friend_count}\nNotes: ${account.notes}`);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('result').innerHTML = `<p>Error: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>
