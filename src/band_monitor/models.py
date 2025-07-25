@@ -24,6 +24,7 @@ class Account(BaseModel):
     band_name: Optional[str] = None
     target_friend_count: int = 10  # 目标增量
     notes: Optional[str] = None
+    link: Optional[str] = None  # 账户链接
     
     # 向后兼容：返回当前好友总数
     @property  
@@ -66,6 +67,7 @@ class Account(BaseModel):
 class AccountCreate(BaseModel):
     username: str
     password: str
+    link: Optional[str] = None
 
 class MonitorResponse(BaseModel):
     success: bool

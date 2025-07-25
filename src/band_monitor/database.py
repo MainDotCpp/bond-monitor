@@ -34,7 +34,8 @@ class Database:
                 'initial_friend_count': 'INTEGER DEFAULT 0',
                 'initial_friend_requests': 'INTEGER DEFAULT 0',
                 'target_friend_count': 'INTEGER DEFAULT 10',
-                'notes': 'TEXT'
+                'notes': 'TEXT',
+                'link': 'TEXT'
             }
             
             for column_name, column_type in new_columns.items():
@@ -50,11 +51,11 @@ class Database:
             
             await db.commit()
 
-    async def add_account(self, username: str, password: str) -> int:
+    async def add_account(self, username: str, password: str, link: str = None) -> int:
         async with aiosqlite.connect(self.db_path) as db:
             cursor = await db.execute(
-                "INSERT INTO accounts (username, password, target_friend_count) VALUES (?, ?, 10)",
-                (username, password)
+                "INSERT INTO accounts (username, password, target_friend_count, link) VALUES (?, ?, 10, ?)",
+                (username, password, link)
             )
             await db.commit()
             return cursor.lastrowid
@@ -89,6 +90,7 @@ class Database:
                     "initial_friend_requests": safe_get(row, "initial_friend_requests", 0) or 0,
                     "target_friend_count": safe_get(row, "target_friend_count", 10),
                     "notes": safe_get(row, "notes"),
+                    "link": safe_get(row, "link"),
                 }
                 
                 return Account(**account_data)
@@ -123,6 +125,7 @@ class Database:
                     "initial_friend_requests": safe_get(row, "initial_friend_requests", 0) or 0,
                     "target_friend_count": safe_get(row, "target_friend_count", 10),
                     "notes": safe_get(row, "notes"),
+                    "link": safe_get(row, "link"),
                 }
                 
                 accounts.append(Account(**account_data))
@@ -249,6 +252,28 @@ class Database:
                 print(f"After update: target={row[0]}, notes='{row[1]}'")
             else:
                 print(f"Account {account_id} not found after update")
+    
+    async def update_link(self, account_id: int, link: str):
+        async with aiosqlite.connect(self.db_path) as db:
+            await db.execute(
+                "UPDATE accounts SET link = ? WHERE id = ?",
+                (link, account_id)
+            )
+            await db.commit()
+
+    async def get_active_accounts(self) -> List[Account]:
+        """获取活跃账户 - 正在运行且未达到目标friend_count"""
+        accounts = await self.get_all_accounts()
+        active_accounts = []
+        
+        for account in accounts:
+            # 检查是否正在运行
+            if account.status == MonitorStatus.RUNNING:
+                # 检查是否未达到目标
+                if account.current_total < account.initial_total + account.target_friend_count:
+                    active_accounts.append(account)
+        
+        return active_accounts
 
     async def delete_account(self, account_id: int):
         async with aiosqlite.connect(self.db_path) as db:

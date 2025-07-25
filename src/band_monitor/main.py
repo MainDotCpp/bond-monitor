@@ -5,17 +5,24 @@ from contextlib import asynccontextmanager
 from .models import AccountCreate, MonitorResponse, Account, MonitorStatus
 from .database import Database
 from .browser_manager import BrowserManager
+from .redis_client import redis_client
+from .link_manager import LinkManager
 import os
 
 # Global instances
 db = Database()
 browser_manager = BrowserManager()
+link_manager = LinkManager(db, browser_manager)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await db.init_db()
+    await redis_client.connect()
+    await link_manager.start_periodic_update(interval=30)  # 每30秒更新一次
     yield
+    await link_manager.stop_periodic_update()
     await browser_manager.close_all()
+    await redis_client.disconnect()
 
 app = FastAPI(title="Band Monitor API", version="1.0.0", lifespan=lifespan)
 
@@ -39,7 +46,7 @@ api_router = APIRouter(prefix="/api")
 @api_router.post("/accounts", response_model=MonitorResponse)
 async def add_account(account: AccountCreate):
     try:
-        account_id = await db.add_account(account.username, account.password)
+        account_id = await db.add_account(account.username, account.password, account.link)
         return MonitorResponse(
             success=True,
             message="Account added successfully",
@@ -158,6 +165,8 @@ async def start_monitoring(account_id: int):
             if browser_closed:
                 # 浏览器被关闭，只更新状态为停止，不重置计数
                 await db.update_account_status(acc_id, MonitorStatus.STOPPED)
+                # 触发Redis更新（浏览器关闭会影响活跃链接）
+                await link_manager.trigger_immediate_update()
                 print(f"Account {acc_id} monitoring stopped due to browser closure")
             else:
                 # 只有在获取到有效数据时才更新计数
@@ -172,6 +181,9 @@ async def start_monitoring(account_id: int):
         
         await browser_manager.start_monitoring(account_id, update_callback)
         await db.update_account_status(account_id, MonitorStatus.RUNNING)
+        
+        # 触发立即更新Redis链接
+        await link_manager.trigger_immediate_update()
         
         return MonitorResponse(
             success=True,
@@ -190,6 +202,9 @@ async def pause_monitoring(account_id: int):
         
         await browser_manager.pause_monitoring(account_id)
         await db.update_account_status(account_id, MonitorStatus.PAUSED)
+        
+        # 触发立即更新Redis链接（暂停后链接会被移除）
+        await link_manager.trigger_immediate_update()
         
         return MonitorResponse(
             success=True,
@@ -210,6 +225,8 @@ async def resume_monitoring(account_id: int):
             if browser_closed:
                 # 浏览器被关闭，只更新状态为停止，不重置计数
                 await db.update_account_status(acc_id, MonitorStatus.STOPPED)
+                # 触发Redis更新（浏览器关闭会影响活跃链接）
+                await link_manager.trigger_immediate_update()
                 print(f"Account {acc_id} monitoring stopped due to browser closure")
             else:
                 # 只有在获取到有效数据时才更新计数
@@ -224,6 +241,9 @@ async def resume_monitoring(account_id: int):
         
         await browser_manager.start_monitoring(account_id, update_callback)
         await db.update_account_status(account_id, MonitorStatus.RUNNING)
+        
+        # 触发立即更新Redis链接
+        await link_manager.trigger_immediate_update()
         
         return MonitorResponse(
             success=True,
@@ -242,6 +262,9 @@ async def delete_account(account_id: int):
         
         await browser_manager.close_browser(account_id)
         await db.delete_account(account_id)
+        
+        # 触发立即更新Redis链接（删除后链接会被移除）
+        await link_manager.trigger_immediate_update()
         
         return MonitorResponse(
             success=True,
@@ -286,9 +309,33 @@ async def update_target(account_id: int, target_data: dict):
         print(f"Updating account {account_id}: target={target_friend_count}, notes={notes}")
         await db.update_target_and_notes(account_id, target_friend_count, notes)
         
+        # 触发立即更新Redis链接（目标变化可能影响活跃状态）
+        await link_manager.trigger_immediate_update()
+        
         return MonitorResponse(
             success=True,
             message="Target and notes updated successfully"
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.put("/accounts/{account_id}/link", response_model=MonitorResponse)
+async def update_link(account_id: int, link_data: dict):
+    try:
+        account = await db.get_account(account_id)
+        if not account:
+            raise HTTPException(status_code=404, detail="Account not found")
+        
+        link = link_data.get('link', None)
+        await db.update_link(account_id, link)
+        
+        # 触发立即更新Redis链接
+        await link_manager.trigger_immediate_update()
+        
+        return MonitorResponse(
+            success=True,
+            message="Link updated successfully"
         )
         
     except Exception as e:
@@ -305,6 +352,9 @@ async def close_browser(account_id: int):
         await browser_manager.pause_monitoring(account_id)
         await browser_manager.close_browser(account_id)
         await db.update_account_status(account_id, MonitorStatus.STOPPED)
+        
+        # 触发立即更新Redis链接（浏览器关闭后链接会被移除）
+        await link_manager.trigger_immediate_update()
         
         return MonitorResponse(
             success=True,
@@ -338,6 +388,63 @@ async def capture_screenshot(account_id: int):
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/links/active", response_model=MonitorResponse)
+async def get_active_links():
+    try:
+        links = await link_manager.get_active_links()
+        return MonitorResponse(
+            success=True,
+            message="Active links retrieved successfully",
+            data={"links": links}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/links/update", response_model=MonitorResponse)
+async def force_update_links():
+    try:
+        await link_manager.force_update()
+        # 获取更新后的链接用于验证
+        current_links = await redis_client.get_active_links()
+        return MonitorResponse(
+            success=True,
+            message="Links updated successfully",
+            data={"current_links": list(current_links)}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/debug/redis", response_model=MonitorResponse)
+async def debug_redis():
+    try:
+        # 获取当前Redis中的链接
+        current_links = await redis_client.get_active_links()
+        
+        # 获取活跃账户
+        active_accounts = await db.get_active_accounts()
+        
+        return MonitorResponse(
+            success=True,
+            message="Redis debug info",
+            data={
+                "current_links": list(current_links),
+                "active_accounts_count": len(active_accounts),
+                "active_accounts": [
+                    {
+                        "id": acc.id, 
+                        "status": acc.status.value, 
+                        "link": acc.link, 
+                        "band_id": acc.band_id,
+                        "current_total": acc.current_total,
+                        "target": acc.target_friend_count
+                    } for acc in active_accounts
+                ]
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 # Include API router
 app.include_router(api_router)
