@@ -284,11 +284,13 @@ class BrowserManager:
             # 尝试获取好友请求数量
             try:
                 join_status_element = await page.wait_for_selector('a[class="joinStatus"]', timeout=5000)
-                if await join_status_element.is_visible():
+                if  join_status_element:
                     join_status_text = await join_status_element.text_content()
                     # 正则提取好友请求数量（格式如：pending/123）
+                    print(f"Join status text: {join_status_text}")
                     import re
-                    match = re.search(r'(.*)\/(\d+)', join_status_text)
+                    match = re.search(r'.*(\d+)$', join_status_text)
+                    print(f"Match: {match}")
                     if match:
                         result['friend_requests'] = int(match.group(1)) if match.group(1).isdigit() else 0
                         print(f"Friend requests: {result['friend_requests']}")
