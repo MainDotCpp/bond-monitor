@@ -4,6 +4,7 @@ import os
 import json
 import logging
 from .models import Account
+from .config import config
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +17,8 @@ class RedisClient:
         self.client = None
     
     async def connect(self):
+        if not config.enable_sync:
+            return
         if not self.client:
             self.client = redis.Redis(
                 host=self.host,
@@ -38,10 +41,14 @@ class RedisClient:
             raise e
     
     async def disconnect(self):
+        if not config.enable_sync:
+            return
         if self.client:
             await self.client.close()
     
     async def update_active_links(self, links: List[str]):
+        if not config.enable_sync:
+            return
         try:
             await self.connect()
             
@@ -64,6 +71,8 @@ class RedisClient:
                 raise
     
     async def get_active_links(self) -> Set[str]:
+        if not config.enable_sync:
+            return set()
         try:
             await self.connect()
             return await self.client.smembers("links")
@@ -78,6 +87,8 @@ class RedisClient:
                 return set()
     
     async def add_link(self, link: str):
+        if not config.enable_sync:
+            return
         try:
             await self.connect()
             await self.client.sadd("links", link)
@@ -87,6 +98,8 @@ class RedisClient:
             await self.client.sadd("links", link)
     
     async def remove_link(self, link: str):
+        if not config.enable_sync:
+            return
         try:
             await self.connect()
             await self.client.srem("links", link)

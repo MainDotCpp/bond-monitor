@@ -4,6 +4,7 @@ from .database import Database
 from .browser_manager import BrowserManager
 from .redis_client import redis_client
 import logging
+from .config import config
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +40,8 @@ class LinkManager:
         return links
     
     async def update_redis_links(self, force: bool = False):
+        if not config.enable_sync:
+            return False
         """更新Redis中的链接"""
         try:
             active_links = await self.get_active_links()
@@ -56,6 +59,8 @@ class LinkManager:
             return False
     
     async def trigger_immediate_update(self):
+        if not config.enable_sync:
+            return
         """触发立即更新（事件驱动）"""
         if not self.is_running:
             return
@@ -69,6 +74,8 @@ class LinkManager:
             logger.error(f"Failed to trigger immediate update: {e}")
     
     async def start_periodic_update(self, interval: int = 30):
+        if not config.enable_sync:
+            return
         """启动定期更新任务"""
         if self.is_running:
             return
@@ -116,5 +123,7 @@ class LinkManager:
             self.update_task = None
     
     async def force_update(self):
+        if not config.enable_sync:
+            return
         """立即更新一次"""
         await self.update_redis_links(force=True)

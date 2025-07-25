@@ -8,6 +8,7 @@ from .browser_manager import BrowserManager
 from .redis_client import redis_client
 from .link_manager import LinkManager
 import os
+from .config import config
 
 # Global instances
 db = Database()
@@ -17,12 +18,14 @@ link_manager = LinkManager(db, browser_manager)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await db.init_db()
-    await redis_client.connect()
-    await link_manager.start_periodic_update(interval=30)  # 每30秒更新一次
+    if config.enable_sync:
+        await redis_client.connect()
+        await link_manager.start_periodic_update(interval=30)  # 每30秒更新一次
     yield
-    await link_manager.stop_periodic_update()
-    await browser_manager.close_all()
-    await redis_client.disconnect()
+    if config.enable_sync:
+        await link_manager.stop_periodic_update()
+        await browser_manager.close_all()
+        await redis_client.disconnect()
 
 app = FastAPI(title="Band Monitor API", version="1.0.0", lifespan=lifespan)
 
@@ -166,7 +169,8 @@ async def start_monitoring(account_id: int):
                 # 浏览器被关闭，只更新状态为停止，不重置计数
                 await db.update_account_status(acc_id, MonitorStatus.STOPPED)
                 # 触发Redis更新（浏览器关闭会影响活跃链接）
-                await link_manager.trigger_immediate_update()
+                if config.enable_sync:
+                    await link_manager.trigger_immediate_update()
                 print(f"Account {acc_id} monitoring stopped due to browser closure")
             else:
                 # 只有在获取到有效数据时才更新计数
@@ -183,7 +187,8 @@ async def start_monitoring(account_id: int):
         await db.update_account_status(account_id, MonitorStatus.RUNNING)
         
         # 触发立即更新Redis链接
-        await link_manager.trigger_immediate_update()
+        if config.enable_sync:
+            await link_manager.trigger_immediate_update()
         
         return MonitorResponse(
             success=True,
@@ -204,7 +209,8 @@ async def pause_monitoring(account_id: int):
         await db.update_account_status(account_id, MonitorStatus.PAUSED)
         
         # 触发立即更新Redis链接（暂停后链接会被移除）
-        await link_manager.trigger_immediate_update()
+        if config.enable_sync:
+            await link_manager.trigger_immediate_update()
         
         return MonitorResponse(
             success=True,
@@ -226,7 +232,8 @@ async def resume_monitoring(account_id: int):
                 # 浏览器被关闭，只更新状态为停止，不重置计数
                 await db.update_account_status(acc_id, MonitorStatus.STOPPED)
                 # 触发Redis更新（浏览器关闭会影响活跃链接）
-                await link_manager.trigger_immediate_update()
+                if config.enable_sync:
+                    await link_manager.trigger_immediate_update()
                 print(f"Account {acc_id} monitoring stopped due to browser closure")
             else:
                 # 只有在获取到有效数据时才更新计数
@@ -243,7 +250,8 @@ async def resume_monitoring(account_id: int):
         await db.update_account_status(account_id, MonitorStatus.RUNNING)
         
         # 触发立即更新Redis链接
-        await link_manager.trigger_immediate_update()
+        if config.enable_sync:
+            await link_manager.trigger_immediate_update()
         
         return MonitorResponse(
             success=True,
@@ -264,7 +272,8 @@ async def delete_account(account_id: int):
         await db.delete_account(account_id)
         
         # 触发立即更新Redis链接（删除后链接会被移除）
-        await link_manager.trigger_immediate_update()
+        if config.enable_sync:
+            await link_manager.trigger_immediate_update()
         
         return MonitorResponse(
             success=True,
@@ -310,7 +319,8 @@ async def update_target(account_id: int, target_data: dict):
         await db.update_target_and_notes(account_id, target_friend_count, notes)
         
         # 触发立即更新Redis链接（目标变化可能影响活跃状态）
-        await link_manager.trigger_immediate_update()
+        if config.enable_sync:
+            await link_manager.trigger_immediate_update()
         
         return MonitorResponse(
             success=True,
@@ -331,7 +341,8 @@ async def update_link(account_id: int, link_data: dict):
         await db.update_link(account_id, link)
         
         # 触发立即更新Redis链接
-        await link_manager.trigger_immediate_update()
+        if config.enable_sync:
+            await link_manager.trigger_immediate_update()
         
         return MonitorResponse(
             success=True,
@@ -354,7 +365,8 @@ async def close_browser(account_id: int):
         await db.update_account_status(account_id, MonitorStatus.STOPPED)
         
         # 触发立即更新Redis链接（浏览器关闭后链接会被移除）
-        await link_manager.trigger_immediate_update()
+        if config.enable_sync:
+            await link_manager.trigger_immediate_update()
         
         return MonitorResponse(
             success=True,
