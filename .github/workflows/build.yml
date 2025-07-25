@@ -23,7 +23,7 @@ jobs:
       - name: Build exe
         run: pyinstaller --onefile run.py
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: band-monitor-windows
           path: dist/run.exe
@@ -43,27 +43,7 @@ jobs:
       - name: Build binary
         run: pyinstaller --onefile run.py
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: band-monitor-macos
-          path: dist/run
-
-  build-linux:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt pyinstaller
-      - name: Build binary
-        run: pyinstaller --onefile run.py
-      - name: Upload artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: band-monitor-linux
           path: dist/run 
